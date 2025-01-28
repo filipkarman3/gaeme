@@ -98,8 +98,8 @@ data World = World {
     wr     :: WorldRaw,
 
     -- feel free to add whatever else you want past this line
-    tileWidth :: Int,
-    player :: Player
+    tileWidth :: Float,
+    player :: P.Player
 }
 
 -- you can even define your own functions here!

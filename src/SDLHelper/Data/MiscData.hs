@@ -26,6 +26,9 @@ class Drawable a where
         r  = getRect a
         r' = r { rectY = rectY r + d }
 
+    changePos :: a -> (Float, Float) -> a
+    changePos a (x, y) = changeX (changeY a y) x
+
     getSprite :: a -> (SDL.Texture, SDL.TextureInfo)
 
 toInt :: Float -> Int
