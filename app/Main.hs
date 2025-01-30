@@ -13,8 +13,13 @@ import qualified SDLHelper.KeyboardReader as KB
 import qualified SDLHelper.Data.MiscData as MD
 import qualified SDLHelper.Data.KeyboardReaderExposed as KB (Keybind(..))
 
+import qualified Data.Map as Map
+import qualified Level as L
+import qualified LevelData as L
+
 import qualified Player as P
 
+import GHC.Float (float2Int)
 import Control.Monad.Extra (ifM)
 
 -- ## -- ## -- ## -- ## MAIN ## -- ## -- ## -- ## --
@@ -25,7 +30,7 @@ main = H.doMain "Gaeme" (500,500) "assets/layout.kb" gameInit gameLoop gameTermi
 -- initialises variables necessary for the game
 gameInit :: W.WorldRaw -> IO W.World
 gameInit wr = do
-    let tileWidth = 25.0 -- the width of the tiles on the screen
+    let tileWidth = 25 -- the width of the tiles on the screen
 
     -- create the player object
     playerSprite <- H.loadTexture (W.r wr) "assets/player.png"
@@ -34,11 +39,29 @@ gameInit wr = do
         P.sprite = playerSprite
     }
 
+    -- load the tile sprites
+    boxTexture <- H.loadTexture (W.r wr) "assets/box.png"
+    wallTexture <- H.loadTexture (W.r wr) "assets/wall.png"
+    holeTexture <- H.loadTexture (W.r wr) "assets/hole.png"
+    filledHoleTexture <- H.loadTexture (W.r wr) "assets/filledHole.png"
+
+    let tileSprites = Map.fromList [
+            (L.Box [],     boxTexture),
+            (L.Wall,       wallTexture),
+            (L.Hole,       holeTexture),
+            (L.FilledHole, filledHoleTexture)
+            ]
+
     -- create the world
     let w = W.World {
         W.wr = wr,
         W.tileWidth = tileWidth,
-        W.player = p
+        W.player = MD.changePos p (mapTuple fromIntegral L.playerStart),
+        W.tileSprites = tileSprites,
+        W.levels = L.levels,
+        W.levelNum = 0,
+        W.moveNum = 0,
+        W.moves = 0
     }
 
     pure w -- return the world
@@ -59,35 +82,73 @@ tickWorld w = movePlayer w
 movePlayer :: W.World -> IO W.World
 movePlayer w = f keys dirs where
     keys = [KB.Left, KB.Up, KB.Right, KB.Down]
-    dirs = map (\(x,y)->(x*tw,y*tw)) [(-1.0, 0.0), (0.0, -1.0), (1.0, 0.0), (0.0, 1.0)]
-    tw = W.tileWidth w
+    dirs = [L.Left, L.Up, L.Right, L.Down]
 
     -- for each key [Left, Up, Right, Down], check if it is pressed
     -- if it is, adjust the player's position
     -- otherwise, check the next key
-    f :: [KB.Keybind] -> [(Float, Float)] -> IO W.World
+    f :: [KB.Keybind] -> [L.Dir] -> IO W.World
     f [] _ = pure w
-    f (x:xs) (y:ys) = ifM (KB.isKeyPressed w x)
-        {-then-} (pure (adjustPlayer y))
-        {-else-} (f xs ys)
+    f (x:xs) (d:ds) = ifM (KB.isKeyPressed w x)
+        {-then-} (pure $ L.movePlayer w d)
+        {-else-} (f xs ds)
+
+    -- m :: W.World -> L.Dir -> W.World
+    -- m w' d = case levelInteraction w' d of
+    --     Nothing -> w'
+    --     Just l' -> adjustLevel (adjustPlayer w' $ L.getDirTup d) l'
+
+    -- levelInteraction w' d = L.attemptToMove (W.moves w') (playerPos w') d (level w')
+    playerPos w' = mapTuple float2Int (R.rectX $ playerRect w', R.rectY $ playerRect w')
+    playerRect w' = P.rect (W.player w')
 
     -- each key has a corresponding x and y, eg: left -> (-1, 0)
     -- adjustPlayer moves the player by the corresponding x and y
-    adjustPlayer :: (Float, Float) -> W.World
-    adjustPlayer dir = w {
-        W.player = MD.changePos (W.player w) dir
+    adjustPlayer :: W.World -> (Int, Int) -> W.World
+    adjustPlayer w' dir = w' {
+        W.player = MD.changePos (W.player w') (mapTuple fromIntegral dir)
     }
+
+    adjustLevel :: W.World -> L.Level -> W.World
+    adjustLevel w' l' = updateLevel (incrementMoves w') l'
+
+    incrementMoves :: W.World -> W.World
+    incrementMoves w' = w' { W.moves = W.moves w' + 1 }
+
+    updateLevel w' l' = w' { W.levels = setAt (W.levels w') (W.levelNum w') l' }
+
+
+setAt :: [a] -> Int -> a -> [a]
+setAt xs i x = take i xs ++ [x] ++ drop (i + 1) xs
+
+level :: W.World -> L.Level
+level w = W.levels w !! W.levelNum w
+
+mapTuple :: (a->b) -> (a,a) -> (b,b)
+mapTuple f (a,b) = (f a, f b)
 
 -- ## -- ## -- ## -- ## RENDER WORLD ## -- ## -- ## -- ## --
 renderWorld :: W.World -> IO ()
 renderWorld w = do
     SDL.rendererDrawColor (W.getR w) SDL.$= SDL.V4 255 255 255 255
     SDL.fillRect (W.getR w) Nothing
-    H.renderEntity w (W.player w)
+    L.renderLevel w (level w)
+    renderTileEntity w (W.player w)
+
+-- ## -- ## -- ## -- ## RENDER TILE ENTITY ## -- ## -- ## -- ## --
+-- though I am treating each square as one unit long, this doesn't mean they are one pixel long
+-- so you need to scale the position of the rendered entity by the tile width
+renderTileEntity :: (MD.Drawable e) => W.World -> e -> IO ()
+renderTileEntity w e = H.renderEntity w scaledE where
+    scaledE = MD.setRect e r'
+    r' = r { R.rectX = fromIntegral tw * R.rectX r, R.rectY = fromIntegral tw * R.rectY r }
+    r = MD.getRect e
+    tw = W.tileWidth w
 
 -- ## -- ## -- ## -- ## GAME TERMINATE ## -- ## -- ## -- ## --
 -- free any memory here
 gameTerminate :: W.World -> IO ()
 gameTerminate w = do
     SDL.destroyTexture (fst $ P.sprite $ W.player w)
+    Map.foldr (\t io -> SDL.destroyTexture (fst $ t) >> io) (pure ()) (W.tileSprites w)
     pure ()

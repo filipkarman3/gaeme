@@ -16,8 +16,12 @@ module SDLHelper.Data.WorldExposed where
 import qualified SDL
 
 import qualified SDLHelper.Data.Keyboard as KB
+import qualified SDLHelper.Data.MiscData as MD
 
 import qualified Player as P (Player)
+import qualified LevelData as L
+
+import qualified Data.Map as Map
 
 data WorldRaw = WorldRaw {
     -- find more info on the keyboard in SDLHelper.Keyboard
@@ -98,8 +102,13 @@ data World = World {
     wr     :: WorldRaw,
 
     -- feel free to add whatever else you want past this line
-    tileWidth :: Float,
-    player :: P.Player
+    tileWidth :: Int,
+    player :: P.Player,
+    tileSprites :: Map.Map L.Tile MD.Sprite,
+    levels :: [L.Level],
+    levelNum :: Int,
+    moveNum :: Int,
+    moves :: Int
 }
 
 -- you can even define your own functions here!
