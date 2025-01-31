@@ -17,6 +17,9 @@ import qualified Data.Map as Map
 
 import GHC.Float (float2Int)
 
+import qualified Data.Either as Either
+import Data.Maybe
+
 levels :: [Level]
 levels = [
         Map.fromList [
@@ -77,7 +80,38 @@ moveBox l pos moveNum d = case tileAhead of
         updateBoxPos l' = updateKeyAndValue l' pos pos' updateBoxHistory 
         fillHole l'     = Map.adjust (const FilledHole) pos' (Map.delete pos l')
         maybeL'         = moveBox l pos' moveNum d 
-        updateBoxHistory (Box s) = Box $ (moveNum, d):s
+        updateBoxHistory (Box s) = Box $ (moveNum, revDir d):s
+
+rewind :: Level -> Int -> Level
+rewind l moveNum = rewind' (Map.toList l) moveNum
+    where
+        rewind' [] _ = l
+        rewind' ((pos,tile):xs) moveNum = case tile of
+            Box ((i,d):_) -> if i == moveNum then rewind (fromEither (moveBoxReverse l pos moveNum d)) moveNum else rewind' xs moveNum
+            _ -> rewind' xs moveNum
+        fromEither (Either.Left l') = l'
+        fromEither (Either.Right l') = l'
+
+-- Should be blocked by player as well
+moveBoxReverse :: Level -> (Int,Int) -> Int -> Dir -> Either Level Level
+moveBoxReverse l pos moveNum d = case tileAhead of
+    Nothing -> Either.Right $ updateBoxPos l
+    Just FilledHole -> Either.Right $ updateBoxPos l
+    Just Wall -> Either.Left $ Map.adjust (const updatedBox) pos l
+    Just Hole -> Either.Right $ fillHole l
+    Just (Box _) -> case eitherL' of
+        Either.Left l' -> Either.Left $ Map.adjust (const updatedBox) pos l'
+        Either.Right l' -> Either.Right $ updateBoxPos l'
+    where
+        (Box s) = fromJust $ Map.lookup pos l
+        tileAhead = Map.lookup pos' l
+        pos' = move pos d
+        updateBoxPos l' = updateKeyAndValue l' pos pos' (const updatedBox)
+        fillHole l' = Map.adjust (const FilledHole) pos' (Map.delete pos l')
+        eitherL' = moveBoxReverse l pos' moveNum d
+        updatedBox = case s of
+            ((i,x):xs) -> if i == moveNum then Box xs else Box ((i,x):xs)
+            _ -> Box s
 
 getPlayerPos :: W.World -> (Int, Int)
 getPlayerPos w = mapTuple float2Int (R.rectX $ getPlayerRect w, R.rectY $ getPlayerRect w)
@@ -101,6 +135,12 @@ getDirTup d = case d of
     Right -> (1, 0)
     Up    -> (0,-1)
     Down  -> (0, 1)
+
+revDir :: Dir -> Dir
+revDir Left = Right
+revDir Right = Left
+revDir Up = Down
+revDir Down = Up
 
 setAt :: [a] -> Int -> a -> [a]
 setAt xs i x = take i xs ++ [x] ++ drop (i + 1) xs
