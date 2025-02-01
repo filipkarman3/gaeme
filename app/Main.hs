@@ -76,7 +76,7 @@ gameLoop w = ifM (KB.isKeyPressed w KB.Quit)
 
 -- ## -- ## -- ## -- ## TICK WORLD ## -- ## -- ## -- ## --
 tickWorld :: W.World -> IO W.World
-tickWorld w = movePlayer w
+tickWorld w = movePlayer w >>= rewind
 
 -- move the player on the screen
 movePlayer :: W.World -> IO W.World
@@ -93,29 +93,14 @@ movePlayer w = f keys dirs where
         {-then-} (pure $ L.movePlayer w d)
         {-else-} (f xs ds)
 
-    -- m :: W.World -> L.Dir -> W.World
-    -- m w' d = case levelInteraction w' d of
-    --     Nothing -> w'
-    --     Just l' -> adjustLevel (adjustPlayer w' $ L.getDirTup d) l'
+-- rewinds the boxes once
+rewind :: W.World -> IO W.World
+rewind w = ifM (KB.isKeyPressed w KB.Rewind) (pure $ L.rewind (decrementWorld w)) (pure w)
 
-    -- levelInteraction w' d = L.attemptToMove (W.moves w') (playerPos w') d (level w')
-    playerPos w' = mapTuple float2Int (R.rectX $ playerRect w', R.rectY $ playerRect w')
-    playerRect w' = P.rect (W.player w')
-
-    -- each key has a corresponding x and y, eg: left -> (-1, 0)
-    -- adjustPlayer moves the player by the corresponding x and y
-    adjustPlayer :: W.World -> (Int, Int) -> W.World
-    adjustPlayer w' dir = w' {
-        W.player = MD.changePos (W.player w') (mapTuple fromIntegral dir)
-    }
-
-    adjustLevel :: W.World -> L.Level -> W.World
-    adjustLevel w' l' = updateLevel (incrementMoves w') l'
-
-    incrementMoves :: W.World -> W.World
-    incrementMoves w' = w' { W.moves = W.moves w' + 1 }
-
-    updateLevel w' l' = w' { W.levels = setAt (W.levels w') (W.levelNum w') l' }
+decrementWorld :: W.World -> W.World
+decrementWorld w = if mN > 0 then w' else w where
+    mN = W.moveNum w
+    w' = w { W.moveNum = mN-1 }
 
 
 setAt :: [a] -> Int -> a -> [a]

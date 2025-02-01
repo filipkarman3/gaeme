@@ -63,7 +63,10 @@ movePlayer w d = case tileAhead of
         pos       = getPlayerPos w
         l         = level w
         maybeL'   = moveBox l pos' (W.moveNum w) d
-        updateLevel w' l' = w' { W.levels = setAt (W.levels w') (W.levelNum w') l'}
+        updateLevel w' l' = w' {
+            W.levels = setAt (W.levels w') (W.levelNum w') l',
+            W.moveNum = W.moveNum w' + 1
+        }
 
 moveBox :: Level -> (Int,Int) -> Int -> Dir -> Maybe Level
 moveBox l pos moveNum d = case tileAhead of
@@ -82,19 +85,26 @@ moveBox l pos moveNum d = case tileAhead of
         maybeL'         = moveBox l pos' moveNum d 
         updateBoxHistory (Box s) = Box $ (moveNum, revDir d):s
 
-rewind :: Level -> Int -> Level
-rewind l moveNum = rewind' (Map.toList l) moveNum
+
+rewind :: W.World -> W.World
+rewind w = rewind' (Map.toList l) moveNum
     where
-        rewind' [] _ = l
+        rewind' [] _ = toWorld w l
         rewind' ((pos,tile):xs) moveNum = case tile of
-            Box ((i,d):_) -> if i == moveNum then rewind (fromEither (moveBoxReverse l pos moveNum d)) moveNum else rewind' xs moveNum
+            Box ((i,d):_) -> if i == moveNum then rewind (toWorld w (fromEither (moveBoxReverse l pos moveNum d playerPos))) else rewind' xs moveNum
             _ -> rewind' xs moveNum
         fromEither (Either.Left l') = l'
         fromEither (Either.Right l') = l'
+        toWorld w' l = w' {W.levels = setAt (W.levels w') (W.levelNum w') l}
+
+        moveNum = W.moveNum w
+        l = W.levels w !! W.levelNum w
+        playerPos = getPlayerPos w
 
 -- Should be blocked by player as well
-moveBoxReverse :: Level -> (Int,Int) -> Int -> Dir -> Either Level Level
-moveBoxReverse l pos moveNum d = case tileAhead of
+moveBoxReverse :: Level -> (Int,Int) -> Int -> Dir -> (Int,Int) -> Either Level Level
+moveBoxReverse l pos moveNum d playerPos = if pos' == playerPos then Either.Left (Map.adjust (const updatedBox) pos l)
+    else case tileAhead of
     Nothing -> Either.Right $ updateBoxPos l
     Just FilledHole -> Either.Right $ updateBoxPos l
     Just Wall -> Either.Left $ Map.adjust (const updatedBox) pos l
@@ -108,7 +118,7 @@ moveBoxReverse l pos moveNum d = case tileAhead of
         pos' = move pos d
         updateBoxPos l' = updateKeyAndValue l' pos pos' (const updatedBox)
         fillHole l' = Map.adjust (const FilledHole) pos' (Map.delete pos l')
-        eitherL' = moveBoxReverse l pos' moveNum d
+        eitherL' = moveBoxReverse l pos' moveNum d playerPos
         updatedBox = case s of
             ((i,x):xs) -> if i == moveNum then Box xs else Box ((i,x):xs)
             _ -> Box s
