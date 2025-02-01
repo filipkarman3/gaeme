@@ -20,11 +20,21 @@ class Drawable a where
     changeX a d = setRect a r' where
         r  = getRect a
         r' = r { rectX = rectX r + d }
+    
+    setX :: a -> Float -> a
+    setX a d = setRect a r' where
+        r = getRect a
+        r' = r {rectX = d}
 
     changeY :: a -> Float -> a
     changeY a d = setRect a r' where
         r  = getRect a
         r' = r { rectY = rectY r + d }
+    
+    setY :: a -> Float -> a
+    setY a d = setRect a r' where
+        r = getRect a
+        r' = r {rectY = d}
 
     changePos :: a -> (Float, Float) -> a
     changePos a (x, y) = changeX (changeY a y) x

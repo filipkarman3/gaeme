@@ -65,8 +65,8 @@ data WorldRaw = WorldRaw {
 -- log adds a log message to a list
 -- log will display the messages in order that they're received at the end of the frame
 -- log allows you to command data to be displayed terminal outside of monadic contexts
-log :: World -> String -> World
-log w s = w { wr = wr' } where
+log :: String -> World -> World
+log s w = w { wr = wr' } where
     wr1 = wr w
     wr' = wr1 { logger = s : logger wr1 }
 
@@ -107,8 +107,7 @@ data World = World {
     tileSprites :: Map.Map L.Tile MD.Sprite,
     levels :: [L.Level],
     levelNum :: Int,
-    moveNum :: Int,
-    moves :: Int
+    moveNum :: Int
 }
 
 -- you can even define your own functions here!

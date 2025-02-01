@@ -22,9 +22,14 @@ import qualified Player as P
 import GHC.Float (float2Int)
 import Control.Monad.Extra (ifM)
 
+import qualified Data.StateVar as S
+
+screenWidth = 500
+screenHeight = 500
+
 -- ## -- ## -- ## -- ## MAIN ## -- ## -- ## -- ## --
 main :: IO ()
-main = H.doMain "Gaeme" (500,500) "assets/layout.kb" gameInit gameLoop gameTerminate
+main = H.doMain "Gaeme" (screenWidth, screenHeight) "assets/layout.kb" gameInit gameLoop gameTerminate
 
 -- ## -- ## -- ## -- ## GAME INIT ## -- ## -- ## -- ## --
 -- initialises variables necessary for the game
@@ -60,8 +65,7 @@ gameInit wr = do
         W.tileSprites = tileSprites,
         W.levels = L.levels,
         W.levelNum = 0,
-        W.moveNum = 0,
-        W.moves = 0
+        W.moveNum = 0
     }
 
     pure w -- return the world
@@ -76,7 +80,7 @@ gameLoop w = ifM (KB.isKeyPressed w KB.Quit)
 
 -- ## -- ## -- ## -- ## TICK WORLD ## -- ## -- ## -- ## --
 tickWorld :: W.World -> IO W.World
-tickWorld w = movePlayer w >>= rewind
+tickWorld w = movePlayer w >>= (\w' -> pure $ W.log (show $ P.rect $ W.player w') w') >>= changeLevel >>= rewind
 
 -- move the player on the screen
 movePlayer :: W.World -> IO W.World
@@ -93,6 +97,31 @@ movePlayer w = f keys dirs where
         {-then-} (pure $ L.movePlayer w d)
         {-else-} (f xs ds)
 
+changeLevel :: W.World -> IO W.World
+changeLevel w
+    | toofarright = pure wNext
+    | toofarleft  = pure wSame
+    | otherwise   = pure w where
+        wNext = w {
+            -- W.levelNum = if W.levelNum w + 1 >= length (W.levels w) then length (W.levels w)-1 else (W.levelNum w + 1),
+            W.levelNum = ln + 1,
+            W.player   = pLeft
+        }
+        wSame = w {
+            W.player   = pLeft
+        }
+        pLeft       = MD.setX (W.player w) 0
+        pRight      = MD.setX (W.player w) (fromIntegral lastTile)
+        toofarleft  = fst (getPlayerPos w) < 0
+        toofarright = fst (getPlayerPos w) > lastTile
+        lastTile    = screenWidth `div` (W.tileWidth w) - 1
+        ln          = W.levelNum w
+
+
+getPlayerPos :: W.World -> (Int,Int)
+getPlayerPos w = (x,y) where
+    SDL.V2 x y = MD.getPos $ W.player w
+
 -- rewinds the boxes once
 rewind :: W.World -> IO W.World
 rewind w = ifM (KB.isKeyPressed w KB.Rewind) (pure $ L.rewind (decrementWorld w)) (pure w)
@@ -101,7 +130,6 @@ decrementWorld :: W.World -> W.World
 decrementWorld w = if mN > 0 then w' else w where
     mN = W.moveNum w
     w' = w { W.moveNum = mN-1 }
-
 
 setAt :: [a] -> Int -> a -> [a]
 setAt xs i x = take i xs ++ [x] ++ drop (i + 1) xs

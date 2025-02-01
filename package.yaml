@@ -33,6 +33,7 @@ dependencies:
 - sdl2-ttf
 - sdl2-mixer
 - sdl2-image
+- StateVar
 
 ghc-options:
 - -Wall
