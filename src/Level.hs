@@ -20,101 +20,42 @@ import GHC.Float (float2Int)
 import qualified Data.Either as Either
 import Data.Maybe
 
-levels :: [Level]
-levels = [
-        Map.fromList (
-            makeTiles Wall [
-                (2,1),
-                (3,1),
-                (4,1),
-                (1,2),
-                (2,2),
-                (1,3),
-                (1,4),
-                (1,5),
-                (2,5),
-                (3,5),
-                (4,5),
-                (4,6),
-                (4,7),
-                (4,8),
-                (4,9),
-                (6,9),
-                (7,9),
-                (4,2),
-                (4,3),
-                (5,3),
-                (6,3),
-                (6,4),
-                (7,4),
-                (7,5),
-                (7,6),
-                (7,7),
-                (6,7),
-                (5,9),
-                (6,9),
-                (7,9),
-                (8,9),
-                (9,9),
-                (10,9),
-                (11,9),
-                (12,9),
-                (13,9),
-                (14,9),
-                (15,9),
-                (16,9),
-                (17,9),
-                (18,9),
-                (19,9),
-                (20,9),
-                (8,7),
-                (9,7),
-                (10,7),
-                (11,7),
-                (12,7),
-                (13,7),
-                (14,7),
-                (15,7),
-                (16,7),
-                (17,7),
-                (18,7),
-                (19,7),
-                (20,7)
-
-
-            ] ++ makeTiles (Box []) [
-                (3,3),
-                (5,5)
-            ]
-        ),
-
-        Map.fromList (
-            makeTiles (Box []) [
-                (0,0), (10,10)
-            ]
-        )
-    ]
-
-makeTiles :: Tile -> [(Int,Int)] -> [((Int,Int), Tile)]
-makeTiles t xs = map (\x -> (x,t)) xs
-
 playerStart :: (Int,Int)
 playerStart = (3, 2)
 
+-- renderLevel :: W.World -> Level -> IO ()
+-- renderLevel w l = Map.foldrWithKey f (pure ()) l where
+--     f :: (Int, Int) -> Tile -> IO () -> IO ()
+--     f (x,y) tile io = H.renderSimple w (sprite tile) (scaledPos x y) >> io
+
+--     scaledPos :: Int -> Int -> SDL.V2 Int
+--     scaledPos x y = SDL.V2 (x*tw) (y*tw)
+
+--     sprite :: Tile -> MD.Sprite
+--     sprite t = case t of
+--         Box _ -> (W.tileSprites w) Map.! (Box [])
+--         _     -> (W.tileSprites w) Map.! t
+
+--     tw = W.tileWidth w
+
 renderLevel :: W.World -> Level -> IO ()
 renderLevel w l = Map.foldrWithKey f (pure ()) l where
-    f :: (Int, Int) -> Tile -> IO () -> IO ()
-    f (x,y) tile io = H.renderSimple w (sprite tile) (scaledPos x y) >> io
+    f pos tile io = case tile of
+        Box []           -> renderTile (Box []) pos >> io
+        Box (boxDatum:_) -> renderTile (Box []) pos >> renderArrow boxDatum pos >> io
+        t                -> renderTile t        pos >> io
+    
+    renderTile  t p = H.renderSimple w (tileSprite t)  (scaledPos p)
+    renderArrow a p = H.renderSimple w (arrowSprite a) (scaledPos p)
+    
+    tileSprite t = W.tileSprites w Map.! t
+    arrowSprite (mN, d) = if mN == moveNum-1
+        then W.arrowSprites w Map.! d
+        else W.arrowSpritesInactive w Map.! d
 
-    scaledPos :: Int -> Int -> SDL.V2 Int
-    scaledPos x y = SDL.V2 (x*tw) (y*tw)
-
-    sprite :: Tile -> MD.Sprite
-    sprite t = case t of
-        Box _ -> (W.tileSprites w) Map.! (Box [])
-        _     -> (W.tileSprites w) Map.! t
-
-    tw = W.tileWidth w
+    scaledPos (x,y) = SDL.V2 (x*tw) (y*tw)
+    moveNum = W.moveNum w
+    tw      = W.tileWidth w
 
 movePlayer :: W.World -> Dir -> W.World
 movePlayer w d = case tileAhead of

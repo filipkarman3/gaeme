@@ -109,7 +109,9 @@ data World = World {
     savedLevel :: L.Level,
     savedPlayerPos :: (Int,Int),
     levelNum :: Int,
-    moveNum :: Int
+    moveNum :: Int,
+    arrowSprites :: Map.Map L.Dir MD.Sprite,
+    arrowSpritesInactive :: Map.Map L.Dir MD.Sprite
 }
 
 -- you can even define your own functions here!

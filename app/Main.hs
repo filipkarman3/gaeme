@@ -57,6 +57,14 @@ gameInit wr = do
             (L.FilledHole, filledHoleTexture)
             ]
 
+    arrowSpritePaths <- let paths = map (\s -> "assets/arrows/"++s++".png") ["left", "right", "up", "down"]
+            in mapM (H.loadTexture (W.r wr)) paths
+    let arrowSprites = Map.fromList $ zip [L.Left, L.Right, L.Up, L.Down] arrowSpritePaths
+
+    arrowSpriteInactivePaths <- let paths = map (\s -> "assets/arrows/"++s++"-inactive.png") ["left", "right", "up", "down"]
+            in mapM (H.loadTexture (W.r wr)) paths
+    let arrowSpritesInactive = Map.fromList $ zip [L.Left, L.Right, L.Up, L.Down] arrowSpriteInactivePaths
+
     -- create the world
     let w = W.World {
         W.wr = wr,
@@ -67,7 +75,9 @@ gameInit wr = do
         W.savedLevel = L.levels !! 0,
         W.savedPlayerPos = L.playerStart,
         W.levelNum = 0,
-        W.moveNum = 0
+        W.moveNum = 0,
+        W.arrowSprites = arrowSprites,
+        W.arrowSpritesInactive = arrowSpritesInactive
     }
 
     pure w -- return the world
@@ -101,7 +111,10 @@ movePlayer w = f keys dirs where
 
 restartLevel :: W.World -> IO W.World
 restartLevel w = ifM (KB.isKeyPressed w KB.Restart) (pure levelReset) (pure w) where
-    levelReset = w {W.levels = setAt (W.levels w) (W.levelNum w) (W.savedLevel w), W.player = MD.setPos (W.player w) (mapTuple fromIntegral (W.savedPlayerPos w))}
+    levelReset = w {
+        W.levels = setAt (W.levels w) (W.levelNum w) (W.savedLevel w),
+        W.player = MD.setPos (W.player w) (mapTuple fromIntegral (W.savedPlayerPos w))
+    }
 
 changeLevel :: W.World -> IO W.World
 changeLevel w
@@ -171,5 +184,7 @@ renderTileEntity w e = H.renderEntity w scaledE where
 gameTerminate :: W.World -> IO ()
 gameTerminate w = do
     SDL.destroyTexture (fst $ P.sprite $ W.player w)
-    Map.foldr (\t io -> SDL.destroyTexture (fst $ t) >> io) (pure ()) (W.tileSprites w)
+    Map.foldr (\t io -> SDL.destroyTexture (fst t) >> io) (pure ()) (W.tileSprites w)
+    Map.foldr (\t io -> SDL.destroyTexture (fst t) >> io) (pure ()) (W.arrowSprites w)
+    Map.foldr (\t io -> SDL.destroyTexture (fst t) >> io) (pure ()) (W.arrowSpritesInactive w)
     pure ()
