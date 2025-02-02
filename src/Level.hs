@@ -98,6 +98,7 @@ levels = [
 makeTiles :: Tile -> [(Int,Int)] -> [((Int,Int), Tile)]
 makeTiles t xs = map (\x -> (x,t)) xs
 
+playerStart :: (Int,Int)
 playerStart = (3, 2)
 
 renderLevel :: W.World -> Level -> IO ()

@@ -106,6 +106,8 @@ data World = World {
     player :: P.Player,
     tileSprites :: Map.Map L.Tile MD.Sprite,
     levels :: [L.Level],
+    savedLevel :: L.Level,
+    savedPlayerPos :: (Int,Int),
     levelNum :: Int,
     moveNum :: Int
 }

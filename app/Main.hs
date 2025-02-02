@@ -64,6 +64,8 @@ gameInit wr = do
         W.player = MD.changePos p (mapTuple fromIntegral L.playerStart),
         W.tileSprites = tileSprites,
         W.levels = L.levels,
+        W.savedLevel = L.levels !! 0,
+        W.savedPlayerPos = L.playerStart,
         W.levelNum = 0,
         W.moveNum = 0
     }
@@ -80,7 +82,7 @@ gameLoop w = ifM (KB.isKeyPressed w KB.Quit)
 
 -- ## -- ## -- ## -- ## TICK WORLD ## -- ## -- ## -- ## --
 tickWorld :: W.World -> IO W.World
-tickWorld w = movePlayer w >>= (\w' -> pure $ W.log (show $ P.rect $ W.player w') w') >>= changeLevel >>= rewind
+tickWorld w = movePlayer w >>= restartLevel >>= changeLevel >>= rewind
 
 -- move the player on the screen
 movePlayer :: W.World -> IO W.World
@@ -97,6 +99,10 @@ movePlayer w = f keys dirs where
         {-then-} (pure $ L.movePlayer w d)
         {-else-} (f xs ds)
 
+restartLevel :: W.World -> IO W.World
+restartLevel w = ifM (KB.isKeyPressed w KB.Restart) (pure levelReset) (pure w) where
+    levelReset = w {W.levels = setAt (W.levels w) (W.levelNum w) (W.savedLevel w), W.player = MD.setPos (W.player w) (mapTuple fromIntegral (W.savedPlayerPos w))}
+
 changeLevel :: W.World -> IO W.World
 changeLevel w
     | toofarright = pure wNext
@@ -105,6 +111,8 @@ changeLevel w
         wNext = w {
             -- W.levelNum = if W.levelNum w + 1 >= length (W.levels w) then length (W.levels w)-1 else (W.levelNum w + 1),
             W.levelNum = ln + 1,
+            W.savedLevel = W.levels w !! (ln + 1),
+            W.savedPlayerPos = (0,snd $ getPlayerPos w),
             W.player   = pLeft
         }
         wSame = w {

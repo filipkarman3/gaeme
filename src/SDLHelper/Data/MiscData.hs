@@ -39,6 +39,9 @@ class Drawable a where
     changePos :: a -> (Float, Float) -> a
     changePos a (x, y) = changeX (changeY a y) x
 
+    setPos :: a -> (Float, Float) -> a
+    setPos a (x,y) = setX (setY a y) x
+
     getSprite :: a -> (SDL.Texture, SDL.TextureInfo)
 
 toInt :: Float -> Int
