@@ -119,7 +119,11 @@ data World = World {
     font :: SDLF.Font,
     tick :: Int,
     isIntro :: Bool,
-    introImg :: MD.Sprite
+    introImg :: MD.Sprite,
+    isEnding :: Bool,
+    endingImg :: MD.Sprite,
+    cheeseSprite :: MD.Sprite,
+    cheesePos :: (Int,Int)
 }
 
 -- you can even define your own functions here!

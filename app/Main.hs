@@ -25,6 +25,8 @@ import Control.Monad.Extra (ifM)
 
 import qualified Data.StateVar as S
 
+import Control.Monad.Extra (when)
+
 screenWidth = 500
 screenHeight = 500
 
@@ -56,6 +58,8 @@ gameInit wr = do
     signSprite  <- H.loadTexture (W.r wr) "assets/sign.png"
     introImg    <- H.loadTexture (W.r wr) "assets/intro.png"
     floorSprite <- H.loadTexture (W.r wr) "assets/floor.png"
+    cheeseSprite <- H.loadTexture (W.r wr) "assets/cheese.png"
+    endingImg    <- H.loadTexture (W.r wr) "assets/ending.png"
 
     -- create the world
     let w = W.World {
@@ -76,7 +80,11 @@ gameInit wr = do
         W.tick = 0,
         W.font = font,
         W.isIntro = True,
-        W.introImg = introImg
+        W.introImg = introImg,
+        W.isEnding = False,
+        W.endingImg = endingImg,
+        W.cheeseSprite = cheeseSprite,
+        W.cheesePos = (12,4)
     }
 
     pure w -- return the world
@@ -94,18 +102,25 @@ loadFrames wr s1 ss s2 = mapM (H.loadTexture (W.r wr)) ss' where
 gameLoop :: W.World -> IO W.World
 gameLoop w = ifM (KB.isKeyPressed w KB.Quit)
         {-then-} (pure $ W.setQuit w True)
-        {-else-} (if W.isIntro w then introTick w else tickWorld w >>= \w' -> renderWorld w' >> pure w')
+        {-else-} (if W.isIntro w then introTick w
+            else if W.isEnding w then outroTick w
+            else tickWorld w >>= \w' -> renderWorld w' >> pure w')
 
 introTick :: W.World -> IO W.World
 introTick w = ifM (KB.isKeyPressed w KB.Restart) (pure $ w { W.isIntro = False }) (H.renderSimple w (W.introImg w) (SDL.V2 0 0) >> pure w)
 
+outroTick :: W.World -> IO W.World
+outroTick w = ifM (KB.isKeyPressed w KB.Quit) (pure $ W.setQuit w True) (H.renderSimple w (W.endingImg w) (SDL.V2 0 0) >> pure w)
+
 -- ## -- ## -- ## -- ## TICK WORLD ## -- ## -- ## -- ## --
 tickWorld :: W.World -> IO W.World
-tickWorld w = movePlayer w >>= restartLevel >>= changeLevel >>= rewind >>= tick
+tickWorld w = movePlayer w >>= restartLevel >>= changeLevel >>= rewind >>= tick >>= checkEnd
 
 tick :: W.World -> IO W.World
 tick w = pure $ w { W.tick = W.tick w + 1 }
 
+checkEnd :: W.World -> IO W.World
+checkEnd w = pure $ if W.levelNum w == 5 && getPlayerPos w == W.cheesePos w then w { W.isEnding = True} else w
 -- move the player on the screen
 movePlayer :: W.World -> IO W.World
 movePlayer w = f keys dirs where
@@ -182,6 +197,7 @@ renderWorld w = do
     renderTileEntity w (W.player w)
     H.renderSimple w (W.signSprite w) (SDL.V2 signX signY)
     renderText w
+    when (W.levelNum w == 5) (H.renderSimple w (W.cheeseSprite w) ((uncurry SDL.V2) $ mapTuple (W.tileWidth w *) (W.cheesePos w)))
     where
         tw = W.tileWidth w
         (signX, signY) = mapTuple (tw*) $ W.signPos w !! W.levelNum w
@@ -227,4 +243,5 @@ gameTerminate w = do
     SDL.destroyTexture $ fst $ W.signSprite w
     SDLF.free $ W.font w
     SDL.destroyTexture $ fst $ W.introImg w
+    SDL.destroyTexture $ fst $ W.cheeseSprite w
     pure ()
