@@ -5,6 +5,7 @@ module Main (main) where
 import Lib
 
 import qualified SDL
+import qualified SDL.Font as SDLF
 
 import qualified SDLHelper.SDLHelper as H
 import qualified SDLHelper.Data.WorldExposed as W
@@ -37,33 +38,23 @@ gameInit :: W.WorldRaw -> IO W.World
 gameInit wr = do
     let tileWidth = 25 -- the width of the tiles on the screen
 
-    -- create the player object
-    playerSprite <- H.loadTexture (W.r wr) "assets/player.png"
+    let dirstrs = ["left", "right", "up", "down"]
+
+    arrowSprites         <- framesToMap [L.Left ..] $ loadFrames wr "assets/arrows/" dirstrs ".png"
+    arrowSpritesInactive <- framesToMap [L.Left ..] $ loadFrames wr "assets/arrows/" dirstrs "-inactive.png"
+    playerSprites        <- framesToMap [L.Left ..] $ loadFrames wr "assets/player/" dirstrs ".png"
+    tileSprites          <- framesToMap [L.Box [], L.Wall, L.Hole, L.FilledHole] $ loadFrames wr "assets/tiles/" ["box", "wall", "hole", "filledHole"] ".png"
+
+    font <- SDLF.load "assets/font.ttf" 14
+
     let p = P.Player {
         P.rect = R.Rect 0 0 25 25,
-        P.sprite = playerSprite
+        P.sprites = playerSprites,
+        P.dir = L.Left
     }
 
-    -- load the tile sprites
-    boxTexture <- H.loadTexture (W.r wr) "assets/box.png"
-    wallTexture <- H.loadTexture (W.r wr) "assets/wall.png"
-    holeTexture <- H.loadTexture (W.r wr) "assets/hole.png"
-    filledHoleTexture <- H.loadTexture (W.r wr) "assets/filledHole.png"
-
-    let tileSprites = Map.fromList [
-            (L.Box [],     boxTexture),
-            (L.Wall,       wallTexture),
-            (L.Hole,       holeTexture),
-            (L.FilledHole, filledHoleTexture)
-            ]
-
-    arrowSpritePaths <- let paths = map (\s -> "assets/arrows/"++s++".png") ["left", "right", "up", "down"]
-            in mapM (H.loadTexture (W.r wr)) paths
-    let arrowSprites = Map.fromList $ zip [L.Left, L.Right, L.Up, L.Down] arrowSpritePaths
-
-    arrowSpriteInactivePaths <- let paths = map (\s -> "assets/arrows/"++s++"-inactive.png") ["left", "right", "up", "down"]
-            in mapM (H.loadTexture (W.r wr)) paths
-    let arrowSpritesInactive = Map.fromList $ zip [L.Left, L.Right, L.Up, L.Down] arrowSpriteInactivePaths
+    signSprite <- H.loadTexture (W.r wr) "assets/sign.png"
+    introImg   <- H.loadTexture (W.r wr) "assets/intro.png"
 
     -- create the world
     let w = W.World {
@@ -77,10 +68,23 @@ gameInit wr = do
         W.levelNum = 0,
         W.moveNum = 0,
         W.arrowSprites = arrowSprites,
-        W.arrowSpritesInactive = arrowSpritesInactive
+        W.arrowSpritesInactive = arrowSpritesInactive,
+        W.signSprite = signSprite,
+        W.signPos = [(10,5),(10,3),(13,6),(9,9),(13,5),(4,5)],
+        W.tick = 0,
+        W.font = font,
+        W.isIntro = True,
+        W.introImg = introImg
     }
 
     pure w -- return the world
+
+framesToMap :: (Ord k) => [k] -> IO [MD.Sprite] -> IO (Map.Map k MD.Sprite)
+framesToMap ks iovs = iovs >>= (\vs -> pure $ Map.fromList $ zip ks vs)
+
+loadFrames :: W.WorldRaw -> String -> [String] -> String -> IO [MD.Sprite]
+loadFrames wr s1 ss s2 = mapM (H.loadTexture (W.r wr)) ss' where
+    ss' = map (\s -> s1 ++ s ++ s2) ss
 
 -- ## -- ## -- ## -- ## GAME LOOP ## -- ## -- ## -- ## --
 -- checks if quit key is pressed. If so, quits
@@ -88,11 +92,17 @@ gameInit wr = do
 gameLoop :: W.World -> IO W.World
 gameLoop w = ifM (KB.isKeyPressed w KB.Quit)
         {-then-} (pure $ W.setQuit w True)
-        {-else-} (tickWorld w >>= \w' -> renderWorld w' >> pure w')
+        {-else-} (if W.isIntro w then introTick w else tickWorld w >>= \w' -> renderWorld w' >> pure w')
+
+introTick :: W.World -> IO W.World
+introTick w = ifM (KB.isKeyPressed w KB.Restart) (pure $ w { W.isIntro = False }) (H.renderSimple w (W.introImg w) (SDL.V2 0 0) >> pure w)
 
 -- ## -- ## -- ## -- ## TICK WORLD ## -- ## -- ## -- ## --
 tickWorld :: W.World -> IO W.World
-tickWorld w = movePlayer w >>= restartLevel >>= changeLevel >>= rewind
+tickWorld w = movePlayer w >>= restartLevel >>= changeLevel >>= rewind >>= tick
+
+tick :: W.World -> IO W.World
+tick w = pure $ w { W.tick = W.tick w + 1 }
 
 -- move the player on the screen
 movePlayer :: W.World -> IO W.World
@@ -168,6 +178,31 @@ renderWorld w = do
     SDL.fillRect (W.getR w) Nothing
     L.renderLevel w (level w)
     renderTileEntity w (W.player w)
+    H.renderSimple w (W.signSprite w) (SDL.V2 signX signY)
+    renderText w
+    where
+        tw = W.tileWidth w
+        (signX, signY) = mapTuple (tw*) $ W.signPos w !! W.levelNum w
+
+renderText :: W.World -> IO ()
+renderText w = if W.levelNum w == 0 then do
+        blit (10,2) "Arrow keys to move" (SDL.V4 0 0 0 (fadein 0))
+        blit (2,12) "Space to rewind"    (SDL.V4 0 0 0 (fadein 5))
+        blit (6,15) "Enter to restart"   (SDL.V4 0 0 0 (fadein 10))
+    else pure ()
+    where
+        f = W.font w
+        t = W.tick w
+        blit pos s c = do
+            surface <- SDLF.blended f c s
+            texture <- H.surfaceToTexture (W.getR w) surface
+            H.renderSimple w texture (uncurry SDL.V2 $ mapTuple (tw*) pos)
+        tw = W.tileWidth w
+        fadein  n = fromIntegral $ float2Int $ fadein' n
+        fadein' n
+            | t < n*50     = 1
+            | t < (n+3)*50 = if 255*(fromIntegral (t-(n*50)) / 150.0) == 0 then 1 else 255*(fromIntegral (t-(n*50)) / 150.0)
+            | otherwise    = 255
 
 -- ## -- ## -- ## -- ## RENDER TILE ENTITY ## -- ## -- ## -- ## --
 -- though I am treating each square as one unit long, this doesn't mean they are one pixel long
@@ -183,8 +218,11 @@ renderTileEntity w e = H.renderEntity w scaledE where
 -- free any memory here
 gameTerminate :: W.World -> IO ()
 gameTerminate w = do
-    SDL.destroyTexture (fst $ P.sprite $ W.player w)
     Map.foldr (\t io -> SDL.destroyTexture (fst t) >> io) (pure ()) (W.tileSprites w)
     Map.foldr (\t io -> SDL.destroyTexture (fst t) >> io) (pure ()) (W.arrowSprites w)
     Map.foldr (\t io -> SDL.destroyTexture (fst t) >> io) (pure ()) (W.arrowSpritesInactive w)
+    foldr     (\t io -> SDL.destroyTexture (fst t) >> io) (pure ()) (P.sprites $ W.player w)
+    SDL.destroyTexture $ fst $ W.signSprite w
+    SDLF.free $ W.font w
+    SDL.destroyTexture $ fst $ W.introImg w
     pure ()

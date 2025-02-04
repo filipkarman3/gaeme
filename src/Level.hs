@@ -20,24 +20,6 @@ import GHC.Float (float2Int)
 import qualified Data.Either as Either
 import Data.Maybe
 
-playerStart :: (Int,Int)
-playerStart = (3, 2)
-
--- renderLevel :: W.World -> Level -> IO ()
--- renderLevel w l = Map.foldrWithKey f (pure ()) l where
---     f :: (Int, Int) -> Tile -> IO () -> IO ()
---     f (x,y) tile io = H.renderSimple w (sprite tile) (scaledPos x y) >> io
-
---     scaledPos :: Int -> Int -> SDL.V2 Int
---     scaledPos x y = SDL.V2 (x*tw) (y*tw)
-
---     sprite :: Tile -> MD.Sprite
---     sprite t = case t of
---         Box _ -> (W.tileSprites w) Map.! (Box [])
---         _     -> (W.tileSprites w) Map.! t
-
---     tw = W.tileWidth w
-
 renderLevel :: W.World -> Level -> IO ()
 renderLevel w l = Map.foldrWithKey f (pure ()) l where
     f pos tile io = case tile of
@@ -136,7 +118,8 @@ getPlayerPos :: W.World -> (Int, Int)
 getPlayerPos w = mapTuple float2Int (R.rectX $ getPlayerRect w, R.rectY $ getPlayerRect w)
 
 updatePlayerPos :: W.World -> Dir -> W.World
-updatePlayerPos w d = w { W.player = p' } where
+updatePlayerPos w d = w { W.player = p'' } where
+    p'' = p' { P.dir = d }
     p' = MD.changePos (W.player w) (mapTuple fromIntegral (getDirTup d))
 
 getPlayerRect :: W.World -> R.Rect

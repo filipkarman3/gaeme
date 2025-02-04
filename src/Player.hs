@@ -4,14 +4,19 @@ import qualified SDLHelper.Data.MiscData as MD
 
 import SDLHelper.Data.Rect
 
+import qualified LevelData as L
+
+import qualified Data.Map as Map
+
 import qualified SDL
 
 data Player = Player {
     rect  :: Rect,
-    sprite :: MD.Sprite
+    sprites :: Map.Map L.Dir MD.Sprite,
+    dir :: L.Dir
 }
 
 instance MD.Drawable Player where
     getRect = rect
     setRect p r = p { rect = r }
-    getSprite = sprite
+    getSprite p = sprites p Map.! dir p

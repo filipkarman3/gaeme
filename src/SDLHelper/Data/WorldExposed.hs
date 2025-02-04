@@ -14,6 +14,7 @@ Remember that you can add your own fields to World, just don't remove World's wr
 module SDLHelper.Data.WorldExposed where
 
 import qualified SDL
+import qualified SDL.Font as SDLF
 
 import qualified SDLHelper.Data.Keyboard as KB
 import qualified SDLHelper.Data.MiscData as MD
@@ -111,7 +112,13 @@ data World = World {
     levelNum :: Int,
     moveNum :: Int,
     arrowSprites :: Map.Map L.Dir MD.Sprite,
-    arrowSpritesInactive :: Map.Map L.Dir MD.Sprite
+    arrowSpritesInactive :: Map.Map L.Dir MD.Sprite,
+    signSprite :: MD.Sprite,
+    signPos :: [(Int, Int)],
+    font :: SDLF.Font,
+    tick :: Int,
+    isIntro :: Bool,
+    introImg :: MD.Sprite
 }
 
 -- you can even define your own functions here!

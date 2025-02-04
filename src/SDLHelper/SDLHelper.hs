@@ -21,7 +21,7 @@ import Control.Monad.Extra    (loopM)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Text              (Text)
 
-import Foreign.C.Types (CInt)
+import Foreign.C.Types (CInt, CDouble)
 
 -- check the general setup section of the readme
 doMain :: Text

@@ -2,12 +2,15 @@ module LevelData where
     
 import qualified Data.Map as Map
 
-data Dir  = Left | Right | Up | Down deriving (Eq, Ord, Show)
+data Dir  = Left | Right | Up | Down deriving (Eq, Ord, Show, Enum)
 data Tile = Box [(Int, Dir)] | Wall | Hole | FilledHole deriving (Eq, Ord, Show)
 data TileEntity = PlayerEnt | BoxEnt
 
 type Level = Map.Map (Int, Int) Tile
 
+
+playerStart :: (Int,Int)
+playerStart = (3,2)
 
 levels :: [Level]
 levels = [
