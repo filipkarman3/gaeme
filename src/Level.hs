@@ -21,7 +21,7 @@ import qualified Data.Either as Either
 import Data.Maybe
 
 renderLevel :: W.World -> Level -> IO ()
-renderLevel w l = Map.foldrWithKey f (pure ()) l where
+renderLevel w l = renderFloor >> Map.foldrWithKey f (pure ()) l where
     f pos tile io = case tile of
         Box []           -> renderTile (Box []) pos >> io
         Box (boxDatum:_) -> renderTile (Box []) pos >> renderArrow boxDatum pos >> io
@@ -38,6 +38,8 @@ renderLevel w l = Map.foldrWithKey f (pure ()) l where
     scaledPos (x,y) = SDL.V2 (x*tw) (y*tw)
     moveNum = W.moveNum w
     tw      = W.tileWidth w
+
+    renderFloor = foldr (\pos io -> H.renderSimple w (W.floorSprite w) (scaledPos pos) >> io) (pure ()) ([(x,y) | x <- [0..19], y <- [0..19]])
 
 movePlayer :: W.World -> Dir -> W.World
 movePlayer w d = case tileAhead of

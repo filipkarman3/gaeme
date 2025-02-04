@@ -113,6 +113,7 @@ data World = World {
     moveNum :: Int,
     arrowSprites :: Map.Map L.Dir MD.Sprite,
     arrowSpritesInactive :: Map.Map L.Dir MD.Sprite,
+    floorSprite :: MD.Sprite,
     signSprite :: MD.Sprite,
     signPos :: [(Int, Int)],
     font :: SDLF.Font,

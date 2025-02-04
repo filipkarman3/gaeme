@@ -53,8 +53,9 @@ gameInit wr = do
         P.dir = L.Left
     }
 
-    signSprite <- H.loadTexture (W.r wr) "assets/sign.png"
-    introImg   <- H.loadTexture (W.r wr) "assets/intro.png"
+    signSprite  <- H.loadTexture (W.r wr) "assets/sign.png"
+    introImg    <- H.loadTexture (W.r wr) "assets/intro.png"
+    floorSprite <- H.loadTexture (W.r wr) "assets/floor.png"
 
     -- create the world
     let w = W.World {
@@ -70,6 +71,7 @@ gameInit wr = do
         W.arrowSprites = arrowSprites,
         W.arrowSpritesInactive = arrowSpritesInactive,
         W.signSprite = signSprite,
+        W.floorSprite = floorSprite,
         W.signPos = [(10,5),(10,3),(13,6),(9,9),(13,5),(4,5)],
         W.tick = 0,
         W.font = font,
