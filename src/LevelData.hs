@@ -57,9 +57,9 @@ initMenuData :: MenuData
 initMenuData = MenuData 0 [s1, s2, s3]
 
 s1 = newSeries "base" 1 (3,2) (11,4) sign ls1 where
-    sign = [(0,0), (0,0), (0,0), (0,0), (0,0), (0,0)]
-s2 = newSeries "box programming" 5 (0,11) (15,3) [(1,2)] ls2
-s3 = newSeries "rob name this one" 2 (0,0) (0,1) [(0,0)] ls3
+    sign = [(10,5),(10,3),(13,6),(9,9),(13,5),(4,5)]
+s2 = newSeries "box programming" 5 (0,11) (15,3) [(3,18)] ls2
+s3 = newSeries "rob name this one" 2 (0,1) (19,8) [(3,18)] ls3
 
 ls1 :: [Level]
 ls1 = [

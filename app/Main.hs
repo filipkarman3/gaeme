@@ -130,7 +130,7 @@ introTick w = ifM (KB.isKeyPressed w KB.Enter)
 
 outroTick :: W.World -> IO W.World
 outroTick w = ifM (KB.isKeyPressed w KB.Enter)
-        {-then-} (pure $ W.setQuit w True)
+        {-then-} (pure $ w { W.scene = D.Menu })
         {-else-} (H.renderSimple w (W.endingImg w) (SDL.V2 0 0) >> pure w)
 
 -- ## -- ## -- ## -- ## TICK WORLD ## -- ## -- ## -- ## --
