@@ -16,6 +16,7 @@ data Keybind  = Left
               | Up
               | Down
               | Rewind
+              | Enter
               | Restart
               | Quit
               deriving (Eq, Ord, Enum, Bounded, Generic)
@@ -29,6 +30,7 @@ getDefaultInputsExposed = [
         SDL.ScancodeUp,
         SDL.ScancodeDown,
         SDL.ScancodeSpace,
+        SDL.ScancodeReturn,
         SDL.ScancodeReturn,
         SDL.ScancodeEscape
      ]

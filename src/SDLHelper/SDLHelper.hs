@@ -244,3 +244,9 @@ renderEntity :: (MD.Drawable e)
              -> e
              -> IO ()
 renderEntity w e = renderSimple w (MD.getSprite e) (MD.getPos e)
+
+destroyTextures :: (Foldable t, MD.Drawable e) => t e -> IO ()
+destroyTextures t = foldr (\x io -> SDL.destroyTexture (fst $ MD.getSprite x) >> io) (pure ()) t
+
+destroyTextures' :: (Foldable t) => t MD.Sprite -> IO ()
+destroyTextures' t = foldr (\x io -> SDL.destroyTexture (fst x) >> io) (pure ()) t

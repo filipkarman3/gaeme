@@ -57,7 +57,7 @@ movePlayer w d = case tileAhead of
         l         = level w
         maybeL'   = moveBox l pos' (W.moveNum w) d
         updateLevel w' l' = w' {
-            W.levels = setAt (W.levels w') (W.levelNum w') l',
+            W.curSer = (W.curSer w) { savedLevel = l' },
             W.moveNum = W.moveNum w' + 1
         }
 
@@ -88,10 +88,12 @@ rewind w = rewind' (Map.toList l) moveNum
             _ -> rewind' xs moveNum
         fromEither (Either.Left l') = l'
         fromEither (Either.Right l') = l'
-        toWorld w' l = w' {W.levels = setAt (W.levels w') (W.levelNum w') l}
+        -- toWorld w' l = w' { W.levels = setAt (W.levels w') (W.levelNum w') l}
+        toWorld :: W.World -> Level -> W.World
+        toWorld w' l' = w' { W.curSer = (W.curSer w') { savedLevel = l' }}
 
         moveNum = W.moveNum w
-        l = W.levels w !! W.levelNum w
+        l = level w
         playerPos = getPlayerPos w
 
 -- Should be blocked by player as well
@@ -150,7 +152,7 @@ setAt :: [a] -> Int -> a -> [a]
 setAt xs i x = take i xs ++ [x] ++ drop (i + 1) xs
 
 level :: W.World -> Level
-level w = W.levels w !! W.levelNum w
+level w = savedLevel $ W.curSer w
 
 addTup :: (Int, Int) -> (Int, Int) -> (Int, Int)
 addTup (a,b) (c,d) = (a+c, b+d)

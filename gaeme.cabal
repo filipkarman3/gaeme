@@ -28,6 +28,7 @@ library
       LevelData
       Lib
       Player
+      Data
       SDLHelper.Data.Keyboard
       SDLHelper.Data.KeyboardReaderExposed
       SDLHelper.Data.MiscData

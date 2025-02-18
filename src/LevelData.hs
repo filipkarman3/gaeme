@@ -8,13 +8,61 @@ data TileEntity = PlayerEnt | BoxEnt
 
 type Level = Map.Map (Int, Int) Tile
 
+-- a series is a set of levels
+-- String represents the name
+-- Int represents the difficulty
+-- (Int,Int) represents start position of first level
+-- (Int,Int) (the second one) represents cheese pos in the final level
+-- [(Int,Int)] represents the location of the cheese signs in each level
+-- (start position of following levels depends on your y-co-ordinate when you screen transition)
+data Series = Series {
+        name :: String,
+        difficulty :: Int,
+        startPos :: (Int,Int),
+        cheesePos :: (Int,Int),
+        signPos :: [(Int,Int)],
+        ls :: [Level],
+        currentLevel :: Int,
+        savedLevel   :: Level,
+        savedPlayerPos :: (Int, Int)
+    }
 
-playerStart :: (Int,Int)
---playerStart = (3,2)
-playerStart = (2,2)
+newSeries :: String -> Int -> (Int, Int) -> (Int, Int) -> [(Int, Int)] -> [Level] -> Series
+newSeries name' diff start cheese sign ls' = Series {
+        name = name',
+        difficulty = diff,
+        startPos = start,
+        cheesePos = cheese,
+        signPos = sign,
+        ls = ls',
+        currentLevel = 0,
+        savedLevel = ls'!!0,
+        savedPlayerPos = start
+    }
 
-levels :: [Level]
-levels = [
+loadSeries :: Series -> Series
+loadSeries s = s {
+        currentLevel = 0,
+        savedLevel = ls s !! 0,
+        savedPlayerPos = startPos s
+    }
+
+dummySeries = newSeries "abce " 0 (0,0) (0,0) [] []
+
+-- contains all the series in the game
+-- Int is the index of the series that is being focused on whilst in the menu
+data MenuData  = MenuData Int [Series]
+
+initMenuData :: MenuData
+initMenuData = MenuData 0 [s1, s2, s3]
+
+s1 = newSeries "base" 1 (3,2) (11,4) sign ls1 where
+    sign = [(10,5),(10,3),(13,6),(9,9),(13,5),(4,5)]
+s2 = newSeries "box programming" 5 (0,11) (15,3) [(3,18)] ls2
+s3 = newSeries "rob name this one" 2 (0,1) (19,8) [(3,18)] ls3
+
+ls1 :: [Level]
+ls1 = [
         Map.fromList (
             makeTiles Wall [
                 (2,1),
@@ -181,8 +229,11 @@ levels = [
             ]) ++ makeTiles Wall [
                 (19,10),(19,12)
             ]
-        ),
+        )
+    ]
 
+ls2 :: [Level]
+ls2 = [
         Map.fromList (changePos (0,0) (
             makeTiles Wall [
                                            ( 3, 0), ( 4, 0), ( 5, 0), ( 6, 0), ( 7, 0), ( 8, 0), ( 9, 0), (10, 0), (11, 0), (12, 0), (13, 0), (14, 0), (15, 0),
@@ -201,8 +252,11 @@ levels = [
             ] ++ makeTiles (Box []) [
                 (4,10),(4,4),(5,1),(9,7),(9,6),(9,5),(9,4),(13,2),(13,3),(13,4)
             ]
-        )),
+        ))
+    ]
 
+ls3 :: [Level]
+ls3 = [
         Map.fromList (
             makeTiles Wall [
                 (0,0),(1,0),(2,0),(3,0),(4,0),(5,0),

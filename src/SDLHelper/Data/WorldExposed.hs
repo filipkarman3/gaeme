@@ -22,6 +22,8 @@ import qualified SDLHelper.Data.MiscData as MD
 import qualified Player as P (Player)
 import qualified LevelData as L
 
+import qualified Data as MD2
+
 import qualified Data.Map as Map
 
 data WorldRaw = WorldRaw {
@@ -103,27 +105,28 @@ data World = World {
     wr     :: WorldRaw,
 
     -- feel free to add whatever else you want past this line
-    tileWidth :: Int,
     player :: P.Player,
-    tileSprites :: Map.Map L.Tile MD.Sprite,
-    levels :: [L.Level],
-    savedLevel :: L.Level,
-    savedPlayerPos :: (Int,Int),
-    levelNum :: Int,
     moveNum :: Int,
+
+    tick :: Int,
+
+    tileWidth :: Int,
+    tileSprites :: Map.Map L.Tile MD.Sprite,
     arrowSprites :: Map.Map L.Dir MD.Sprite,
     arrowSpritesInactive :: Map.Map L.Dir MD.Sprite,
     floorSprite :: MD.Sprite,
     signSprite :: MD.Sprite,
-    signPos :: [(Int, Int)],
-    font :: SDLF.Font,
-    tick :: Int,
-    isIntro :: Bool,
     introImg :: MD.Sprite,
-    isEnding :: Bool,
     endingImg :: MD.Sprite,
     cheeseSprite :: MD.Sprite,
-    cheesePos :: (Int,Int)
+    titleSprite :: MD.Sprite,
+    starSprite :: MD.Sprite,
+
+    font :: SDLF.Font,
+
+    scene :: MD2.Scene,
+    menuData :: L.MenuData,
+    curSer :: L.Series
 }
 
 -- you can even define your own functions here!
