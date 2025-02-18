@@ -19,6 +19,7 @@ import qualified Level as L
 import qualified LevelData as L
 
 import qualified Player as P
+import qualified MiscData as D
 
 import GHC.Float (float2Int)
 import Control.Monad.Extra (ifM)
@@ -68,9 +69,9 @@ gameInit wr = do
         W.player = MD.changePos p (mapTuple fromIntegral L.playerStart),
         W.tileSprites = tileSprites,
         W.levels = L.levels,
-        W.savedLevel = L.levels !! 7,
+        W.savedLevel = L.levels !! 0,
         W.savedPlayerPos = L.playerStart,
-        W.levelNum = 7,
+        W.levelNum = 0,
         W.moveNum = 0,
         W.arrowSprites = arrowSprites,
         W.arrowSpritesInactive = arrowSpritesInactive,
@@ -79,12 +80,11 @@ gameInit wr = do
         W.signPos = [(10,5),(10,3),(13,6),(9,9),(13,5),(4,5), (3,18),(3,18)],
         W.tick = 0,
         W.font = font,
-        W.isIntro = True,
         W.introImg = introImg,
-        W.isEnding = False,
         W.endingImg = endingImg,
         W.cheeseSprite = cheeseSprite,
-        W.cheesePos = (12,4)
+        W.cheesePos = (12,4),
+        W.scene = D.Menu
     }
 
     pure w -- return the world
@@ -100,27 +100,78 @@ loadFrames wr s1 ss s2 = mapM (H.loadTexture (W.r wr)) ss' where
 -- checks if quit key is pressed. If so, quits
 -- if not, first tick the world, then update the screen accordingly
 gameLoop :: W.World -> IO W.World
-gameLoop w = ifM (KB.isKeyPressed w KB.Quit)
-        {-then-} (pure $ W.setQuit w True)
-        {-else-} (if W.isIntro w then introTick w
-            else if W.isEnding w then outroTick w
-            else tickWorld w >>= \w' -> renderWorld w' >> pure w')
+gameLoop w = tickWorld w >>=/ renderWorld
+    
+    -- ifM (KB.isKeyPressed w KB.Quit)
+    --     {-then-} (pure $ W.setQuit w True)
+    --     {-else-} (tickWorld w >>=/ renderWorld)
+
+(>>=/) :: (Monad m) => m a -> (a -> m b) -> m a
+x >>=/ y = do
+    a <- x
+    y
+    pure a
 
 introTick :: W.World -> IO W.World
-introTick w = ifM (KB.isKeyPressed w KB.Restart) (pure $ w { W.isIntro = False }) (H.renderSimple w (W.introImg w) (SDL.V2 0 0) >> pure w)
+introTick w = ifM (KB.isKeyPressed w KB.Enter)
+        {-then-} (pure $ w { W.scene = D.Gameplay })
+        {-else-} (H.renderSimple w (W.introImg w) (SDL.V2 0 0) >> pure w)
 
 outroTick :: W.World -> IO W.World
-outroTick w = ifM (KB.isKeyPressed w KB.Quit) (pure $ W.setQuit w True) (H.renderSimple w (W.endingImg w) (SDL.V2 0 0) >> pure w)
+outroTick w = ifM (KB.isKeyPressed w KB.Enter)
+        {-then-} (pure $ W.setQuit w True)
+        {-else-} (H.renderSimple w (W.endingImg w) (SDL.V2 0 0) >> pure w)
 
 -- ## -- ## -- ## -- ## TICK WORLD ## -- ## -- ## -- ## --
 tickWorld :: W.World -> IO W.World
-tickWorld w = movePlayer w >>= restartLevel >>= changeLevel >>= rewind >>= tick >>= checkEnd
+tickWorld w = case W.scene w of
+    D.Intro    -> introTick w
+    D.Outro    -> outroTick w
+    D.Gameplay -> gameTick w
+    D.Menu     -> menuTick w
+
+menuTick :: W.World -> IO W.World
+menuTick w = moveFocus w >>= selectFocus
+
+-- TODO:
+-- finish menuTick function
+-- start and finish rendering function
+moveFocus :: W.World -> IO W.World
+moveFocus w = moveFocusUp w >>= moveFocusDown where
+    moveFocusUp = when (KB.isKeyPressed w KB.Up) (pure moveFocusUp')
+    -- hitDown <- KB.isKeyPressed w KB.Down
+    moveFocusDown
+
+-- :: (Monad m) => m a -> m Bool -> a -> m a
+moveFocusUp' :: W.World -> W.World
+moveFocusUp' w = w { W.MenuData = m' } where
+    D.MenuData i ls = W.MenuData w
+    m' = W.MenuData i' ls
+    i' = if i == 0 then length ls-1 else i-1
+
+moveFocusUp' :: W.World -> W.World
+moveFocusUp' w = w { W.MenuData = m' } where
+    D.MenuData i ls = W.MenuData w
+    m' = W.MenuData i' ls
+    i' = if i == 0 then length ls-1 else i-1
+
+gameTick :: W.World -> IO W.World
+gameTick w = movePlayer w >>= restartLevel >>= changeLevel >>= rewind >>= tick >>= checkEnd >>= checkExit
 
 tick :: W.World -> IO W.World
 tick w = pure $ w { W.tick = W.tick w + 1 }
 
 checkEnd :: W.World -> IO W.World
 checkEnd w = pure $ if W.levelNum w == 5 && getPlayerPos w == W.cheesePos w then w { W.isEnding = True} else w
+
+checkExit :: W.World -> IO W.World
+checkExit w = when (KB.isKeyPressed w KB.Quit) (goToMenu w)
+
+goToMenu :: W.World -> IO W.World
+goToMenu w = w {
+        W.scene = D.Menu
+    }
+
 -- move the player on the screen
 movePlayer :: W.World -> IO W.World
 movePlayer w = f keys dirs where
@@ -236,12 +287,13 @@ renderTileEntity w e = H.renderEntity w scaledE where
 -- free any memory here
 gameTerminate :: W.World -> IO ()
 gameTerminate w = do
-    Map.foldr (\t io -> SDL.destroyTexture (fst t) >> io) (pure ()) (W.tileSprites w)
-    Map.foldr (\t io -> SDL.destroyTexture (fst t) >> io) (pure ()) (W.arrowSprites w)
-    Map.foldr (\t io -> SDL.destroyTexture (fst t) >> io) (pure ()) (W.arrowSpritesInactive w)
-    foldr     (\t io -> SDL.destroyTexture (fst t) >> io) (pure ()) (P.sprites $ W.player w)
-    SDL.destroyTexture $ fst $ W.signSprite w
+    H.destroyTextures $ W.tileSprites w
+    H.destroyTextures $ W.arrowSprites w
+    H.destroyTextures $ W.arrowSpritesInactive w
+    H.destroyTextures $ P.sprites $ W.player w
+
     SDLF.free $ W.font w
     SDL.destroyTexture $ fst $ W.introImg w
+    SDL.destroyTexture $ fst $ W.signSprite w
     SDL.destroyTexture $ fst $ W.cheeseSprite w
     pure ()

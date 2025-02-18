@@ -8,6 +8,12 @@ data TileEntity = PlayerEnt | BoxEnt
 
 type Level = Map.Map (Int, Int) Tile
 
+-- a series is a set of levels
+-- String represents the name
+-- Int represents the difficulty
+-- (Int,Int) represents start position of first level
+-- (start position of following levels depends on your y-co-ordinate when you screen transition)
+data Series = Series String Int (Int,Int) [Level]
 
 playerStart :: (Int,Int)
 --playerStart = (3,2)

@@ -22,6 +22,8 @@ import qualified SDLHelper.Data.MiscData as MD
 import qualified Player as P (Player)
 import qualified LevelData as L
 
+import qualified MiscData as MD2
+
 import qualified Data.Map as Map
 
 data WorldRaw = WorldRaw {
@@ -123,7 +125,8 @@ data World = World {
     isEnding :: Bool,
     endingImg :: MD.Sprite,
     cheeseSprite :: MD.Sprite,
-    cheesePos :: (Int,Int)
+    cheesePos :: (Int,Int),
+    scene :: MD2.Scene
 }
 
 -- you can even define your own functions here!
