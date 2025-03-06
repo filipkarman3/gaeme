@@ -7,3 +7,6 @@ puzzles to push the boundaries of modern science."
 
 **##### How to run #####**\
 Linux: unzip and run gaeme-exe
+
+Additional required dependencies:
+On debian: libsdl2-mixer-2.0-0 libsdl2-image-2.0-0 libsdl2-ttf-2.0-0
